@@ -342,9 +342,13 @@ class Circuit:
 
     def inject_signal(self) -> str:
         '''inject the signal declarations'''
-        inject_str = self.components[0].inject_signal()
-        for i in range(1, len(self.components)):
-            inject_str += self.components[i].inject_signal(self.components[i-1], i==len(self.components)-1)
+        # edit: make it ok for just one layer
+        if (len(self.components)==1):
+            inject_str = self.components[0].inject_signal(last_comp= True)
+        else:
+            inject_str = self.components[0].inject_signal()
+            for i in range(1, len(self.components)):
+                inject_str += self.components[i].inject_signal(self.components[i-1], i==len(self.components)-1)
         return inject_str
 
     def inject_component(self) -> str:
@@ -356,11 +360,14 @@ class Circuit:
     
     def inject_main(self) -> str:
         '''inject the main template'''
-        inject_str = self.components[0].inject_main()
-        for i in range(1, len(self.components)):
-            inject_str += self.components[i].inject_main(self.components[i-1], i==len(self.components)-1)
+        # edit: make it work in case 1 layer
+        if (len(self.components)==1):
+            inject_str = self.components[0].inject_main(last_comp = True)
+        else:
+            inject_str = self.components[0].inject_main()
+            for i in range(1, len(self.components)):
+                inject_str += self.components[i].inject_main(self.components[i-1], i==len(self.components)-1)
         return inject_str
-
     def to_circom(self) -> str:
         '''convert the circuit to a circom file'''
         return circom_template_string.format(**{

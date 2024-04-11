@@ -62,6 +62,14 @@ def DenseInt(nInputs, nOutputs, n, input, weights, bias):
         out[j] = str(out[j] // n)
     return out, remainder
 
+# edit: add MeanCheck
+def MeanCheckInt(nInputs, input):
+    result = 0
+    print("nInputs: ", nInputs)
+    for i in range(nInputs):
+        result += int(input[i])
+    return result/nInputs
+
 def GlobalAveragePooling2DInt(nRows, nCols, nChannels, input):
     out = [0 for _ in range(nChannels)]
     remainder = [None for _ in range(nChannels)]

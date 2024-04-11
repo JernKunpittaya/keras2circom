@@ -162,6 +162,17 @@ def transpile_component(component: Component, dec: int) -> str:
             name=component.name,
         )
         return comp_str+"\n"
+     # edit: add MeanCheck
+    elif component.template.op_name == "MeanCheck":
+        comp_str += "    out = MeanCheckInt({nInputs}, {input})\n".format(
+            nInputs=component.args["nInputs"],
+            input="out",
+        )
+        comp_str += "    output['{name}_out'] = out\n".format(
+            name=component.name,
+        )
+
+        return comp_str+"\n"
     
     elif component.template.op_name == "GlobalAveragePooling2D":
         comp_str += "    out, remainder = GlobalAveragePooling2DInt({nRows}, {nCols}, {nChannels}, {input})\n".format(
