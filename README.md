@@ -25,11 +25,11 @@ npm install
 First, Look at their supported function in example/dense folder
 
 - Just run notebook in dense_keras.ipynb to generate keras file
-- Then, run `python main.py ./example/dense/dense_keras.keras` to generate output folder, consisting of
-  -circuit.circom which contains circom file
-  -circuit.json which contains every predetermined value that we know before hand (like weight, bias, etc.)
-  -circuit.py which contains the algorithm to calcualte (off-chain) the final value of functions we are interested in, so we can provide them as witness (as input signal) in circuit.circom as well. We run circuit.py by creating input.json (inside output folder) like { "in": ["4", "4", "7"] }, then run `python output/circuit.py output/circuit.json output/input.json`, and we will get output.json
-  -Briefly, with input.json, circuit.json, and output.json we can verify in circuit.circom and get output as well
+- Then, run `python main.py ./example/dense/dense_keras.keras` to generate `output` folder, consisting of
+  - `circuit.circom` which contains circom file
+  - `circuit.json` which contains every predetermined value that we know before hand (like weight, bias, etc.)
+  - `circuit.py` which contains the algorithm to calcualte (off-chain) the final value of functions we are interested in, so we can provide them as witness (as input signal) in circuit.circom as well. We run circuit.py by creating `input.json` (inside output folder) like { "in": ["4", "4", "7"] }, then run `python output/circuit.py output/circuit.json output/input.json`, and we will get output.json
+  - Briefly, with `input.json`, `circuit.json`, and `output.json` we can verify in `circuit.circom` and get output as well
 
 Now, we will look at our customed layer 'MeanCheck'
 
@@ -40,11 +40,11 @@ First, since default implementation of this library install circom template in n
 Then, the rest is just the same as above
 
 - Just run notebook in gen_MeanCheck.ipynb to generate keras file
-- Then, run `python main.py ./example/MeanCheck/mean_keras.keras` to generate output folder, consisting of
-  -circuit.circom
-  -circuit.json, which nothing since it this circuit has 2 inputs: one is input so unknown, while the other is witness which is unknown at first as well
-  -circuit.py which allows us to calculate mean_check_out, Inside output folder, we create input.json like { "in": ["4", "4", "7"] }, then run `python output/circuit.py output/circuit.json output/input.json`, and we will get output.json
-  -Briefly, with input.json, circuit.json, and output.json we can verify in circuit.circom and get output as well
+- Then, run `python main.py ./example/MeanCheck/mean_keras.keras` to generate `output` folder, consisting of
+  - `circuit.circom`
+  - `circuit.json`, which nothing since it this circuit has 2 inputs: one is input so unknown, while the other is witness which is unknown at first as well
+  - `circuit.py` which allows us to calculate mean_check_out, Inside `output` folder, we create `input.json` like `{ "in": ["4", "4", "7"] }`, then run `python output/circuit.py output/circuit.json output/input.json`, and we will get `output.json`
+  - Briefly, with `input.json`, `circuit.json`, and `output.json` we can verify in circuit.circom and get `output` as well
 
 ## ==============================================================
 
