@@ -28,7 +28,7 @@ except:
 def inference(input, circuit):
     out = input['in']
     output = {brackets}
-    
+
 {components}
     return out, output
 
@@ -36,11 +36,11 @@ def inference(input, circuit):
 def main():
     """ Main entry point of the app """
     args = docopt(__doc__)
-    
+
     # parse input.json
     with open(args['<input.json>']) as f:
         input = json.load(f)
-    
+
     # parse circuit.json
     with open(args['<circuit.json>']) as f:
         circuit = json.load(f)
@@ -86,7 +86,7 @@ def transpile_component(component: Component, dec: int) -> str:
             name=component.name,
         )
         return comp_str+"\n"
-    
+
     elif component.template.op_name == "BatchNormalization2D":
         comp_str += "    out, remainder = BatchNormalizationInt({nRows}, {nCols}, {nChannels}, {n}, {input}, {a}, {b})\n".format(
             nRows=component.args["nRows"],
@@ -104,7 +104,7 @@ def transpile_component(component: Component, dec: int) -> str:
             name=component.name,
         )
         return comp_str+"\n"
-    
+
     elif component.template.op_name == "Conv1D":
         comp_str += "    out, remainder = Conv1DInt({nInputs}, {nChannels}, {nFilters}, {kernelSize}, {strides}, {n}, {input}, {weights}, {bias})\n".format(
             nInputs=component.args["nInputs"],
@@ -124,7 +124,7 @@ def transpile_component(component: Component, dec: int) -> str:
             name=component.name,
         )
         return comp_str+"\n"
-    
+
     elif component.template.op_name == "Conv2D":
         comp_str += "    out, remainder = Conv2DInt({nRows}, {nCols}, {nChannels}, {nFilters}, {kernelSize}, {strides}, {n}, {input}, {weights}, {bias})\n".format(
             nRows=component.args["nRows"],
@@ -145,7 +145,7 @@ def transpile_component(component: Component, dec: int) -> str:
             name=component.name,
         )
         return comp_str+"\n"
-    
+
     elif component.template.op_name == "Dense":
         comp_str += "    out, remainder = DenseInt({nInputs}, {nOutputs}, {n}, {input}, {weights}, {bias})\n".format(
             nInputs=component.args["nInputs"],
@@ -173,7 +173,18 @@ def transpile_component(component: Component, dec: int) -> str:
         )
 
         return comp_str+"\n"
-    
+
+    elif component.template.op_name == "SumCheck":
+        comp_str += "    out = SumCheckInt({nInputs}, {input})\n".format(
+            nInputs=component.args["nInputs"],
+            input="out",
+        )
+        comp_str += "    output['{name}_out'] = out\n".format(
+            name=component.name,
+        )
+
+        return comp_str+"\n"
+
     elif component.template.op_name == "GlobalAveragePooling2D":
         comp_str += "    out, remainder = GlobalAveragePooling2DInt({nRows}, {nCols}, {nChannels}, {input})\n".format(
             nRows=component.args["nRows"],
@@ -188,7 +199,7 @@ def transpile_component(component: Component, dec: int) -> str:
             name=component.name,
         )
         return comp_str+"\n"
-    
+
     elif component.template.op_name == "GlobalMaxPooling2D":
         comp_str += "    out = GlobalMaxPooling2DInt({nRows}, {nCols}, {nChannels}, {input})\n".format(
             nRows=component.args["nRows"],
@@ -200,7 +211,7 @@ def transpile_component(component: Component, dec: int) -> str:
             name=component.name,
         )
         return comp_str+"\n"
-    
+
     elif component.template.op_name == "MaxPooling2D":
         comp_str += "    out = MaxPooling2DInt({nRows}, {nCols}, {nChannels}, {poolSize}, {strides}, {input})\n".format(
             nRows=component.args["nRows"],
@@ -214,7 +225,7 @@ def transpile_component(component: Component, dec: int) -> str:
             name=component.name,
         )
         return comp_str+"\n"
-    
+
     elif component.template.op_name == "Flatten2D":
         comp_str += "    out = Flatten2DInt({nRows}, {nCols}, {nChannels}, {input})\n".format(
             nRows=component.args["nRows"],
@@ -226,7 +237,7 @@ def transpile_component(component: Component, dec: int) -> str:
             name=component.name,
         )
         return comp_str+"\n"
-    
+
     elif component.template.op_name == "ReLU":
         nRows, nCols, nChannels = component.inputs[0].shape
         comp_str += "    out = ReLUInt({nRows}, {nCols}, {nChannels}, {input})\n".format(
@@ -239,13 +250,13 @@ def transpile_component(component: Component, dec: int) -> str:
             name=component.name,
         )
         return comp_str+"\n"
-    
+
     elif component.template.op_name == "ArgMax":
         comp_str += "    out = ArgMaxInt(out)\n"
         comp_str += "    output['{name}_out'] = out\n".format(
             name=component.name,
         )
         return comp_str+"\n"
-    
+
     else:
         raise ValueError("Unknown component type: {}".format(component.template.op_name))

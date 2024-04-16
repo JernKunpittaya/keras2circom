@@ -70,6 +70,13 @@ def MeanCheckInt(nInputs, input):
         result += int(input[i])
     return result/nInputs
 
+def SumCheckInt(nInputs, input):
+    result = 0
+    print("nInputs: ", nInputs)
+    for i in range(nInputs):
+        result += int(input[i])
+    return result
+
 def GlobalAveragePooling2DInt(nRows, nCols, nChannels, input):
     out = [0 for _ in range(nChannels)]
     remainder = [None for _ in range(nChannels)]

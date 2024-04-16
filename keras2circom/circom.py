@@ -38,7 +38,7 @@ def parse_shape(shape: typing.List[int]) -> str:
     for dim in shape:
         shape_str += '[{}]'.format(dim)
     return shape_str
-    
+
 def parse_index(shape: typing.List[int]) -> str:
     '''parse shape to indices enclosed by []'''
     index_str = ''
@@ -128,7 +128,7 @@ class Signal:
             return 'signal input {}_{}{};\n'.format(
                     comp_name, self.name, parse_shape(self.shape))
         return ''
-    
+
     def inject_main(self, comp_name: str, prev_comp_name: str = None, prev_signal: Signal = None) -> str:
         '''inject signal into main'''
         inject_str = ''
@@ -150,14 +150,14 @@ class Signal:
                             comp_name, self.name, parse_index(self.shape))
             inject_str += '}'*len(self.shape)+'\n'
             return inject_str
-        
+
         if self.shape != prev_signal.shape:
             raise ValueError('shape mismatch: {} vs. {}'.format(self.shape, prev_signal.shape))
-            
+
         for i in range(len(self.shape)):
             inject_str += '{}for (var i{} = 0; i{} < {}; i{}++) {{\n'.format(
                             ' '*i*4, i, i, self.shape[i], i)
-        
+
         if 'activation' in comp_name or 're_lu' in comp_name:
             inject_str += '{}{}{}.{} <== {}.{}{};\n'.format(' '*(i+1)*4,
                         comp_name, parse_index(self.shape), self.name,
@@ -172,19 +172,19 @@ class Signal:
                         prev_comp_name, prev_signal.name, parse_index(self.shape))
         inject_str += '}'*len(self.shape)+'\n'
         return inject_str
-    
+
     def inject_input_signal(self) -> str:
         '''inject the circuit input signal'''
         if self.value is not None:
             raise ValueError('input signal should not have value')
         return 'signal input in{};\n'.format(parse_shape(self.shape))
-    
+
     def inject_output_signal(self) -> str:
         '''inject the circuit output signal'''
         if self.value is not None:
             raise ValueError('output signal should not have value')
-        return 'signal output out{};\n'.format(parse_shape(self.shape)) 
-    
+        return 'signal output out{};\n'.format(parse_shape(self.shape))
+
     def inject_input_main(self, comp_name: str) -> str:
         '''inject the circuit input signal into main'''
         if self.value is not None:
@@ -198,23 +198,23 @@ class Signal:
                     parse_index(self.shape))
         inject_str += '}'*len(self.shape)+'\n'
         return inject_str
-    
+
     def inject_output_main(self, prev_comp_name: str, prev_signal: Signal) -> str:
-        '''inject the circuit output signal into main'''        
+        '''inject the circuit output signal into main'''
         if self.value is not None:
             raise ValueError('output signal should not have value')
         if self.shape != prev_signal.shape:
             raise ValueError('shape mismatch: {} vs. {}'.format(self.shape, prev_signal.shape))
-        
+
         if 'softmax' in prev_comp_name:
             return 'out[0] <== {}.out;\n'.format(prev_comp_name)
-        
+
         inject_str = ''
 
         for i in range(len(self.shape)):
             inject_str += '{}for (var i{} = 0; i{} < {}; i{}++) {{\n'.format(
                         ' '*i*4, i, i, self.shape[i], i)
-        
+
         if 're_lu' in prev_comp_name:
             inject_str += '{}out{} <== {}{}.{};\n'.format(' '*(i+1)*4,
                         parse_index(self.shape),
@@ -237,8 +237,8 @@ class Component:
 
     def inject_include(self) -> str:
         '''include the component template'''
-        return 'include "../{}";\n'.format(self.template.fpath)
-    
+        return 'include "{}";\n'.format(self.template.fpath)
+
     def inject_signal(self, prev_comp: Component = None, last_comp: bool = False) -> str:
         '''inject the component signals'''
         inject_str = ''
@@ -252,7 +252,7 @@ class Component:
             elif signal.value is not None:
                 inject_str += signal.inject_signal(self.name)
         return inject_str
-    
+
     def inject_component(self) -> str:
         '''inject the component declaration'''
         if self.template.op_name == 'ReLU':
@@ -271,7 +271,7 @@ class Component:
 
         return 'component {} = {}({});\n'.format(
             self.name, self.template.op_name, self.parse_args(self.template.args, self.args))
-    
+
     def inject_main(self, prev_comp: Component = None, last_comp: bool = False) -> str:
         '''inject the component main'''
         inject_str = ''
@@ -313,7 +313,7 @@ class Component:
                     value = np.array(value).reshape(signal.shape).tolist()
                 json_dict.update({f'{self.name}_{signal.name}': value})
         return json_dict
-    
+
     @staticmethod
     def parse_args(template_args: typing.List[str], args: typing.Dict[str, typing.Any]) -> str:
         '''parse the args to a format string, ready to be injected'''
@@ -329,7 +329,7 @@ class Circuit:
 
     def add_component(self, component: Component):
         self.components.append(component)
-    
+
     def add_components(self, components: typing.List[Component]):
         self.components.extend(components)
 
@@ -357,7 +357,7 @@ class Circuit:
         for component in self.components:
             inject_str += component.inject_component()
         return inject_str
-    
+
     def inject_main(self) -> str:
         '''inject the main template'''
         # edit: make it work in case 1 layer
@@ -385,5 +385,5 @@ class Circuit:
 
         for component in self.components:
             json_dict.update(component.to_json(dec))
-        
+
         return json.dumps(json_dict)
