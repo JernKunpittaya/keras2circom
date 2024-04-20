@@ -163,8 +163,8 @@ def transpile_component(component: Component, dec: int) -> str:
         )
         return comp_str+"\n"
      # edit: add MeanCheck
-    elif component.template.op_name == "MeanCheck":
-        comp_str += "    out = MeanCheckInt({nInputs}, {input})\n".format(
+    elif component.template.op_name == "TFReduceMean":
+        comp_str += "    out = TFReduceMeanInt({nInputs}, {input})\n".format(
             nInputs=component.args["nInputs"],
             input="out",
         )
@@ -174,9 +174,20 @@ def transpile_component(component: Component, dec: int) -> str:
 
         return comp_str+"\n"
 
-    elif component.template.op_name == "SumCheck":
-        comp_str += "    out = SumCheckInt({nInputs}, {input})\n".format(
+    elif component.template.op_name == "TFReduceSum":
+        comp_str += "    out = TFReduceSumInt({nInputs}, {input})\n".format(
             nInputs=component.args["nInputs"],
+            input="out",
+        )
+        comp_str += "    output['{name}_out'] = out\n".format(
+            name=component.name,
+        )
+
+        return comp_str+"\n"
+
+    elif component.template.op_name == "TFLog":
+        comp_str += "    out = TFLogInt({e}, {input})\n".format(
+            e=component.args["e"],
             input="out",
         )
         comp_str += "    output['{name}_out'] = out\n".format(

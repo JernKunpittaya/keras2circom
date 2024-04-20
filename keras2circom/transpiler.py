@@ -78,12 +78,15 @@ def transpile_layer(layer: Layer, dec: int = 18, last: bool = False) -> typing.L
 
     if layer.op == 'MaxPooling2D':
         return transpile_MaxPooling2D(layer)
-    # edit: add MeanCheck
-    if layer.op =='MeanCheck':
-        return transpile_MeanCheck(layer)
+
+    if layer.op =='TFReduceMean':
+        return transpile_TFReduceMean(layer)
 
     if layer.op =='TFReduceSum':
-        return transpile_SumCheck(layer)
+        return transpile_TFReduceSum(layer)
+
+    if layer.op =='TFLog':
+        return transpile_TFLog(layer)
 
     raise NotImplementedError(f'Layer {layer.op} is not supported yet.')
 
@@ -93,12 +96,15 @@ def transpile_ArgMax(layer: Layer) -> typing.List[Component]:
 def transpile_ReLU(layer: Layer) -> typing.List[Component]:
     return [Component(layer.name, templates['ReLU'], [Signal('in', layer.output), Signal('out', layer.output)], [])]
 
-# edit : add MeanCheck
-def transpile_MeanCheck(layer: Layer) -> typing.List[Component]:
-    return [Component(layer.name, templates['MeanCheck'], [Signal('in', layer.input), Signal('out', (1,))], [], {'nInputs':layer.config['nInputs']})]
+def transpile_TFReduceMean(layer: Layer) -> typing.List[Component]:
+    return [Component(layer.name, templates['TFReduceMean'], [Signal('in', layer.input), Signal('out', (1,))], [], {'nInputs':layer.config['nInputs']})]
 
-def transpile_SumCheck(layer: Layer) -> typing.List[Component]:
-    return [Component(layer.name, templates['SumCheck'], [Signal('in', layer.input), Signal('out', (1,))], [], {'nInputs':layer.config['nInputs']})]
+def transpile_TFReduceSum(layer: Layer) -> typing.List[Component]:
+    return [Component(layer.name, templates['TFReduceSum'], [Signal('in', layer.input), Signal('out', (1,))], [], {'nInputs':layer.config['nInputs']})]
+
+def transpile_TFLog(layer: Layer) -> typing.List[Component]:
+    print(f"!@# layer.output={layer.output}")
+    return [Component(layer.name, templates['TFLog'], [Signal('in', layer.input), Signal('out', (1,))], [], {'e': 2})]
 
 def transpile_AveragePooling2D(layer: Layer) -> typing.List[Component]:
     if layer.config['data_format'] != 'channels_last':

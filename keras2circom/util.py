@@ -1,3 +1,5 @@
+import torch
+
 # assume all inputs are strings
 def AveragePooling2DInt (nRows, nCols, nChannels, poolSize, strides, input):
     out = [[[0 for _ in range(nChannels)] for _ in range((nCols-poolSize)//strides + 1)] for _ in range((nRows-poolSize)//strides + 1)]
@@ -63,19 +65,25 @@ def DenseInt(nInputs, nOutputs, n, input, weights, bias):
     return out, remainder
 
 # edit: add MeanCheck
-def MeanCheckInt(nInputs, input):
+def TFReduceMeanInt(nInputs, input):
     result = 0
-    print("nInputs: ", nInputs)
+    print("TFReduceMeanInt: nInputs=", nInputs)
     for i in range(nInputs):
         result += int(input[i])
     return result/nInputs
 
-def SumCheckInt(nInputs, input):
+def TFReduceSumInt(nInputs, input):
     result = 0
-    print("nInputs: ", nInputs)
+    print("TFReduceSumInt: nInputs=", nInputs)
     for i in range(nInputs):
         result += int(input[i])
     return result
+
+
+def TFLogInt(e, input):
+    print(f"TFLogInt: {e=}, {input=}")
+    # TODO: now return the first item only
+    return torch.log(torch.Tensor(input)).tolist()[0]
 
 def GlobalAveragePooling2DInt(nRows, nCols, nChannels, input):
     out = [0 for _ in range(nChannels)]
