@@ -7,7 +7,36 @@ from tensorflow.keras.layers import Layer as KerasLayer
 import numpy as np
 import keras
 
-supported_ops = [
+from zkstats.onnx2circom.onnx2keras.layers import (
+    TFReciprocal,
+    TFSqrt,
+    TFExp,
+    TFLog,
+    TFReduceSum,
+    TFReduceMean,
+    TFReduceMax,
+    TFReduceMin,
+    # TFArgMax,
+    # TFArgMin,
+    # TFErf,
+)
+
+onnx2circom_ops_raw = [
+    TFLog,  # log_e(n)
+    TFReduceSum,  # sum(n)
+    TFReduceMean,
+    TFReduceMax,
+    TFReduceMin,
+    # TFArgMax,
+    # TFArgMin,
+    TFReciprocal,  # 1/n
+    TFSqrt,  # sqrt(n)
+    TFExp,  # e^n
+    # TFErf,
+]
+onnx2circom_ops = [str(op.__name__) for op in onnx2circom_ops_raw]
+
+keras2circom_ops = [
     'Activation',
     'AveragePooling2D',
     'BatchNormalization',
@@ -19,9 +48,11 @@ supported_ops = [
     'MaxPooling2D',
     'ReLU',
     'Softmax',
-    # edit
-    'MeanCheck'
 ]
+
+
+supported_ops =  keras2circom_ops + onnx2circom_ops
+
 
 skip_ops = [
     'Dropout',
@@ -43,35 +74,33 @@ class Layer:
     def __init__(self, layer: KerasLayer):
         self.op = layer.__class__.__name__
         self.name = layer.name
-        # print('lllllayer: ', layer.input_shape)
         self.input = layer.input.shape[1:]
         self.output = layer.output.shape[1:]
-        self.config = layer.get_config()
+        # FIXME: this only works for data shape in [1, N, 1]
+        # Add "nInputs" to `self.config`
+        shape = layer.input.shape
+        if len(shape) != 3 or shape[0] != 1 or shape[2] != 1:
+            raise Exception(f'Unsupported input shape: {self.op=}, {shape=}')
+        n_inputs = shape[1]
+        self.config = {**layer.get_config(), **{"nInputs": n_inputs}}
         self.weights = layer.get_weights()
 
 
-# edit just skeleton to let this program recognize the layer, 
-# doesnt really matter if it fits the definition, because we 
-        # will just map layer_name --> circom template anyway
-class MeanCheck(keras.layers.Layer):
-    def __init__(self,*args, **kwargs ):
-        super().__init__()
-    def call(self, inputs):
-        return keras.ops.sum(inputs, axis = 2)
-    
 class Model:
     layers: typing.List[Layer]
 
     def __init__(self, filename: str, raw: bool = False):
         ''' Load a Keras model from a file. '''
-        # edit : allow reading customed layer, in this case MeanCheck
+        # edit : allow reading customed layer
         keras.saving.get_custom_objects().clear()
-        custom_objects = {"MeanCheck": MeanCheck}
+        # Only if the torch model name is in this custom_objects, model.summary() will print the mapped name in keras
+        # E.g. without this line, the model.summary() will print the layer name as `tf_reduce_sum (TFReduceSum)`
+        # with `TFReduceSum: SumCheck`, the model.summary() will print the layer name as `sum_check (SumCheck)`
+        custom_objects = {op.__name__: op for op in onnx2circom_ops_raw}
         with keras.saving.custom_object_scope(custom_objects):
             model = load_model(filename)
-        print("summ: ", model.summary())
         self.layers = [Layer(layer) for layer in model.layers if self._for_transpilation(layer.__class__.__name__)]
-    
+
     @staticmethod
     def _for_transpilation(op: str) -> bool:
         if op in skip_ops:

@@ -6,14 +6,15 @@ import os
 
 def transpile(filename: str, output_dir: str = 'output', raw: bool = False, dec: int = 18) -> Circuit:
     ''' Transpile a Keras model to a CIRCOM circuit.'''
-    
+
     model = Model(filename, raw)
 
     circuit = Circuit()
     for layer in model.layers[:-1]:
         circuit.add_components(transpile_layer(layer, dec))
-    
-    circuit.add_components(transpile_layer(model.layers[-1], dec, True))
+
+    res = transpile_layer(model.layers[-1], dec, True)
+    circuit.add_components(res)
 
     if raw:
         if circuit.components[-1].template.op_name == 'ArgMax':
@@ -21,16 +22,16 @@ def transpile(filename: str, output_dir: str = 'output', raw: bool = False, dec:
     # create output directory if it doesn't exist
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    
+
     with open(output_dir + '/circuit.circom', 'w') as f:
         f.write(circuit.to_circom())
-    
+
     with open(output_dir + '/circuit.json', 'w') as f:
         f.write(circuit.to_json(int(dec)))
-    
+
     with open(output_dir + '/circuit.py', 'w') as f:
         f.write(to_py(circuit, int(dec)))
-    
+
     return circuit
 
 def transpile_layer(layer: Layer, dec: int = 18, last: bool = False) -> typing.List[Component]:
@@ -45,42 +46,48 @@ def transpile_layer(layer: Layer, dec: int = 18, last: bool = False) -> typing.L
         if layer.config['activation'] == 'linear':
             return []
         raise NotImplementedError(f'Activation {layer.config["activation"]} not implemented')
-    
+
     if layer.op == 'Softmax':
         if last:
             return transpile_ArgMax(layer)
         raise ValueError('Softmax must be the last layer')
-    
+
     if layer.op == 'ReLU':
         return transpile_ReLU(layer)
 
     if layer.op == 'AveragePooling2D':
         return transpile_AveragePooling2D(layer)
-    
+
     if layer.op == 'BatchNormalization':
         return transpile_BatchNormalization2D(layer, dec)
 
     if layer.op == 'Conv2D':
         return transpile_Conv2D(layer, dec)
-    
+
     if layer.op == 'Dense':
         return transpile_Dense(layer, dec, last)
-        
+
     if layer.op == 'Flatten':
         return transpile_Flatten2D(layer)
 
     if layer.op == 'GlobalAveragePooling2D':
         return transpile_GlobalAveragePooling2D(layer)
-        
+
     if layer.op == 'GlobalMaxPooling2D':
         return transpile_GlobalMaxPooling2D(layer)
-    
+
     if layer.op == 'MaxPooling2D':
         return transpile_MaxPooling2D(layer)
-    # edit: add MeanCheck
-    if layer.op =='MeanCheck':
-        return transpile_MeanCheck(layer)
-    
+
+    if layer.op =='TFReduceMean':
+        return transpile_TFReduceMean(layer)
+
+    if layer.op =='TFReduceSum':
+        return transpile_TFReduceSum(layer)
+
+    if layer.op =='TFLog':
+        return transpile_TFLog(layer)
+
     raise NotImplementedError(f'Layer {layer.op} is not supported yet.')
 
 def transpile_ArgMax(layer: Layer) -> typing.List[Component]:
@@ -89,9 +96,15 @@ def transpile_ArgMax(layer: Layer) -> typing.List[Component]:
 def transpile_ReLU(layer: Layer) -> typing.List[Component]:
     return [Component(layer.name, templates['ReLU'], [Signal('in', layer.output), Signal('out', layer.output)], [])]
 
-# edit : add MeanCheck
-def transpile_MeanCheck(layer: Layer) -> typing.List[Component]:
-    return [Component(layer.name, templates['MeanCheck'], [Signal('in', layer.input), Signal('out', (1,))], [], {'nInputs':layer.config['nInputs']})]
+def transpile_TFReduceMean(layer: Layer) -> typing.List[Component]:
+    return [Component(layer.name, templates['TFReduceMean'], [Signal('in', layer.input), Signal('out', (1,))], [], {'nInputs':layer.config['nInputs']})]
+
+def transpile_TFReduceSum(layer: Layer) -> typing.List[Component]:
+    return [Component(layer.name, templates['TFReduceSum'], [Signal('in', layer.input), Signal('out', (1,))], [], {'nInputs':layer.config['nInputs']})]
+
+def transpile_TFLog(layer: Layer) -> typing.List[Component]:
+    print(f"!@# layer.output={layer.output}")
+    return [Component(layer.name, templates['TFLog'], [Signal('in', layer.input), Signal('out', (1,))], [], {'e': 2})]
 
 def transpile_AveragePooling2D(layer: Layer) -> typing.List[Component]:
     if layer.config['data_format'] != 'channels_last':
@@ -102,7 +115,7 @@ def transpile_AveragePooling2D(layer: Layer) -> typing.List[Component]:
         raise NotImplementedError('Only pool_size[0] == pool_size[1] is supported')
     if layer.config['strides'][0] != layer.config['strides'][1]:
         raise NotImplementedError('Only strides[0] == strides[1] is supported')
-    
+
     return [Component(layer.name, templates['AveragePooling2D'], [Signal('in', layer.input), Signal('out', layer.output), Signal('remainder', layer.output)],[],{
         'nRows': layer.input[0],
         'nCols': layer.input[1],
@@ -120,7 +133,7 @@ def transpile_BatchNormalization2D(layer: Layer, dec: int) -> typing.List[Compon
         raise NotImplementedError('Only center=True is supported')
     if layer.config['scale'] != True:
         raise NotImplementedError('Only scale=True is supported')
-    
+
     gamma = layer.weights[0]
     beta = layer.weights[1]
     moving_mean = layer.weights[2]
@@ -129,7 +142,7 @@ def transpile_BatchNormalization2D(layer: Layer, dec: int) -> typing.List[Compon
 
     a = gamma/(moving_var+epsilon)**.5
     b = beta-gamma*moving_mean/(moving_var+epsilon)**.5
-    
+
     return [Component(layer.name, templates['BatchNormalization2D'], [
         Signal('in', layer.input),
         Signal('a', a.shape, a),
@@ -160,7 +173,7 @@ def transpile_Conv2D(layer: Layer, dec: int) -> typing.List[Component]:
         raise NotImplementedError('Only groups == 1 is supported')
     if layer.config['activation'] not in ['linear', 'relu']:
         raise NotImplementedError(f'Activation {layer.config["activation"]} is not supported')
-    
+
     if layer.config['use_bias'] == False:
         layer.weights.append(np.zeros(layer.weights[0].shape[-1]))
 
@@ -179,11 +192,11 @@ def transpile_Conv2D(layer: Layer, dec: int) -> typing.List[Component]:
         'strides': layer.config['strides'][0],
         'n': '10**'+dec,
         })
-    
+
     if layer.config['activation'] == 'relu':
         activation = Component(layer.name+'_re_lu', templates['ReLU'], [Signal('in', layer.output), Signal('out', layer.output)], [])
         return [conv, activation]
-    
+
     return [conv]
 
 def transpile_Dense(layer: Layer, dec: int, last: bool = False) -> typing.List[Component]:
@@ -193,7 +206,7 @@ def transpile_Dense(layer: Layer, dec: int, last: bool = False) -> typing.List[C
         raise NotImplementedError(f'Activation {layer.config["activation"]} is not supported')
     if layer.config['use_bias'] == False:
         layer.weights.append(np.zeros(layer.weights[0].shape[-1]))
-    
+
     dense = Component(layer.name, templates['Dense'], [
         Signal('in', layer.input),
         Signal('weights', layer.weights[0].shape, layer.weights[0]),
@@ -205,21 +218,21 @@ def transpile_Dense(layer: Layer, dec: int, last: bool = False) -> typing.List[C
         'nOutputs': layer.output[0],
         'n': '10**'+dec,
         })
-    
+
     if layer.config['activation'] == 'relu':
         activation = Component(layer.name+'_re_lu', templates['ReLU'], [Signal('in', layer.output), Signal('out', layer.output)], [])
         return [dense, activation]
-    
+
     if layer.config['activation'] == 'softmax':
         activation = Component(layer.name+'_softmax', templates['ArgMax'], [Signal('in', layer.output), Signal('out', (1,))], [], {'n': layer.output[0]})
         return [dense, activation]
-    
+
     return [dense]
 
 def transpile_Flatten2D(layer: Layer) -> typing.List[Component]:
     if layer.input.__len__() != 3:
         raise NotImplementedError('Only 2D inputs are supported')
-    
+
     return [Component(layer.name, templates['Flatten2D'], [
         Signal('in', layer.input),
         Signal('out', layer.output),
@@ -269,7 +282,7 @@ def transpile_MaxPooling2D(layer: Layer) -> typing.List[Component]:
         raise NotImplementedError('Only pool_size[0] == pool_size[1] is supported')
     if layer.config['strides'][0] != layer.config['strides'][1]:
         raise NotImplementedError('Only strides[0] == strides[1] is supported')
-    
+
     return [Component(layer.name, templates['MaxPooling2D'], [Signal('in', layer.input), Signal('out', layer.output)], [],{
         'nRows': layer.input[0],
         'nCols': layer.input[1],
