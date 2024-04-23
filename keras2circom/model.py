@@ -16,9 +16,9 @@ from zkstats.onnx2circom.onnx2keras.layers import (
     TFReduceMean,
     TFReduceMax,
     TFReduceMin,
-    TFArgMax,
-    TFArgMin,
-    TFErf,
+    # TFArgMax,
+    # TFArgMin,
+    # TFErf,
 )
 
 onnx2circom_ops_raw = [
@@ -27,12 +27,12 @@ onnx2circom_ops_raw = [
     TFReduceMean,
     TFReduceMax,
     TFReduceMin,
-    TFArgMax,
-    TFArgMin,
+    # TFArgMax,
+    # TFArgMin,
     TFReciprocal,  # 1/n
     TFSqrt,  # sqrt(n)
     TFExp,  # e^n
-    TFErf,
+    # TFErf,
 ]
 onnx2circom_ops = [str(op.__name__) for op in onnx2circom_ops_raw]
 
